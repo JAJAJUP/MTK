@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<script language="javascript" type="text/javascript">
+   var url = "ws://192.168.4.1:1337/";
+   var output;
+   var button;
+   var canvas;
+   var context;
+   var time;
+   var debugTextArea;
+
+
+   // This is called when the page finishes loading
+   function init() {
+      // Assign page elements to variables
+      button1 = document.getElementById("frequency");
+      button2 = document.getElementById("reaction");
+      output = document.getElementById("output");
+      canvas = document.getElementById("led");
+      debugTextArea1 = document.getElementById("debugTextArea1");
+      debugTextArea2 = document.getElementById("debugTextArea2");
+      // Draw circle in canvas
+      context = canvas.getContext("2d");
+      context.arc(25, 25, 15, 0, Math.PI * 2, false);
+      context.lineWidth = 3;
+      context.strokeStyle = "black";
+      context.stroke();
+      context.fillStyle = "black";
+      context.fill();
+      // Connect to WebSocket server
+      wsConnect(url);
+   }
+
+
+
+   // Call this to connect to the WebSocket server
+   function wsConnect(url) {
+      // Connect to WebSocket server
+      websocket = new WebSocket(url);
+      // Assign callbacks
+      websocket.onopen = function (evt) { onOpen(evt) };
+      websocket.onclose = function (evt) { onClose(evt) };
+      websocket.onmessage = function (evt) { onMessage(evt) };
+      websocket.onerror = function (evt) { onError(evt) };
+   }
+
+
+
+   // Called when a WebSocket connection is established with the server
+   function onOpen(evt) {
+      // Log connection state
+      console.log("Connected");
+      // Enable button
+      button1.disabled = false;
+      button2.disabled = false;
+
+      context.fillStyle = "green";
+      context.fill();
+      // Get the current state of the LED
+      doSend("Hello MCU");
+   }
+
+
+
+   // Called when the WebSocket connection is closed
+   function onClose(evt) {
+      // Log disconnection state
+      console.log("Disconnected");
+      // Disable button
+      button1.disabled = true;
+      button2.disabled = true;
+
+      context.fillStyle = "black";
+      context.fill();
+      // Try to reconnect after a few seconds
+      setTimeout(function () { wsConnect(url) }, 2000);
+   }
+
+
+
+   // Called when a WebSocket error occurs
+   function onError(evt) {
+      console.log("ERROR: " + evt.data);
+
+      context.fillStyle = "red";
+      context.fill();
+   }
+
+
+
+   // Called when a message is received from the server
+   function onMessage(evt) {
+
+      console.log("Received: " + evt.data);
+      var mode = evt.data.substring(0, 9);
+
+      switch (mode) {
+         case "Mode_1 : ":
+            var frequencyValue = evt.data.substring(10);
+            document.getElementById("punchFrequency").innerHTML = frequencyValue + "   punch/s";
+            debugTextArea1.value += frequencyValue + "\n";
+            debugTextArea1.scrollTop = debugTextArea1.scrollHeight;
+            break;
+         case "Mode_2 : ":
+            var reactionValue = evt.data.substring(10);
+            document.getElementById("reactionTime").innerHTML = reactionValue + "   ms";
+            debugTextArea2.value += reactionValue + "\n";
+            debugTextArea2.scrollTop = debugTextArea1.scrollHeight;
+            break;
+         default:
+            break;
+      }
+   }
+
+
+   // Sends a message to the server (and prints it to the console)
+   function doSend(message) {
+      console.log("Sending : " + message);
+      websocket.send(message);
+   }
+
+
+
+   // Called whenever the HTML button is pressed
+   function onPress(mode) {
+      switch (mode) {
+         case "punchFrequency":
+            console.log("Mode : Punch Frequency");
+            doSend("frequency");
+            break;
+         case "reactionTime":
+            console.log("Mode : Reaction Time");
+            doSend("reaction");
+            break;
+         default:
+            break;
+      }
+   }
+
+
+   // Call the init function as soon as the page loads
+   window.addEventListener("load", init, false);
+
+</script>
+
+<body>
+
+   <head>
+      <style>
+         table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+         }
+
+         td,
+         th {
+            border: 2px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+         }
+      </style>
+   </head>
+   <table>
+      <tr>
+         <th>
+            <h1>Punch Frequency (punch/s)</h1>
+         </th>
+         <th>
+            <h1>Reaction Time (ms)</h1>
+         </th>
+         <th>
+            <h1>Reaction Time (ms)</h1>
+         </th>
+      </tr>
+      <tr>
+         <td>
+            <h1 style="text-align:right;font-size:300%;" id="punchFrequency"></h1>
+         </td>
+         <td>
+            <h1 style="text-align:right;font-size:300%;" id="reactionTime"></h1>
+         </td>
+         <td>
+            <h1 style="text-align:right;font-size:300%;" id="reactionTime"></h1>
+         </td>
+      </tr>
+      <tr>
+         <td>
+            <p><textarea id="debugTextArea1" style="font-size:250%;width:100%;height:400px;"></textarea></p>
+         </td>
+         <td>
+            <p><textarea id="debugTextArea2" style="font-size:250%;width:100%;height:400px;"></textarea></p>
+         </td>
+         <td>
+            <p><textarea id="debugTextArea2" style="font-size:250%;width:100%;height:400px;"></textarea></p>
+         </td>
+      </tr>-
+      <tr>
+         <td><button style="width:80px;height:40px;" id="frequency" onclick="onPress('punchFrequency')"
+               button1.disabled>START</button>
+         </td>0
+         <td><button style="width:80px;height:40px;" id="reaction" onclick="onPress('reactionTime')"
+               button2.disabled>START</button>
+         </td>
+         <td><button style="width:80px;height:40px;" id="reaction" onclick="onPress('reactionTime')"
+            button2.disabled>START</button>
+         </td>
+      </tr>
+
+   </table>
+   <button type="button" onclick="document.getElementById('demo').innerHTML = Date()">Date and Time
+   </button>
+   <p id="demo"></p>
+   <canvas id="led" width="50" height="50"></canvas>
+</body>
+</html>
